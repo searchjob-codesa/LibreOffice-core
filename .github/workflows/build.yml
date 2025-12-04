@@ -213,6 +213,7 @@ jobs:
             --with-help=no \
             --with-lang= \
             --with-myspell-dicts=no \
+            --with-system-libs \
             --without-doxygen \
             --without-java \
             --without-junit \
