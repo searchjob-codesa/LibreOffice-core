@@ -127,6 +127,7 @@ jobs:
             libhyphen-dev \
             libicu-dev \
             liblcms2-dev \
+            libmd4c-dev \
             libneon27-dev \
             libpoppler-cpp-dev \
             libpoppler-dev \
