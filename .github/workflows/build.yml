@@ -94,6 +94,7 @@ jobs:
             libcmis-dev \
             libabw-dev \
             libcdr-dev \
+            libclucene-dev \
             libe-book-dev \
             libepubgen-dev \
             libetonyek-dev \
@@ -138,7 +139,31 @@ jobs:
             libtool \
             unzip \
             wget \
-            zlib1g-dev
+            zlib1g-dev \
+            libcurl4-openssl-dev \
+            libexpat1-dev \
+            libjpeg-dev \
+            libpng-dev \
+            libtiff-dev \
+            libwebp-dev \
+            libfreetype6-dev \
+            libfontforge-dev \
+            libnumbertext-dev \
+            libbox2d-dev \
+            libglm-dev \
+            libglew-dev \
+            libargon2-dev \
+            libbluetooth-dev \
+            libgpg-error-dev \
+            libgcrypt20-dev \
+            libxmlsec1-dev \
+            libxmlsec1-openssl \
+            libtommath-dev \
+            libabseil-dev \
+            libqrcodegen-dev \
+            libdrm-dev \
+            libegl1-mesa-dev \
+            libgbm-dev
       
       - name: Configure ccache
         run: |
@@ -188,7 +213,6 @@ jobs:
             --with-help=no \
             --with-lang= \
             --with-myspell-dicts=no \
-            --with-system-libs \
             --without-doxygen \
             --without-java \
             --without-junit \
