@@ -160,7 +160,8 @@ jobs:
             libabsl-dev \
             libdrm-dev \
             libegl1-mesa-dev \
-            libgbm-dev
+            libgbm-dev \
+            libeot-dev
       
       - name: Configure ccache
         run: |
