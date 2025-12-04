@@ -1,0 +1,160 @@
+name: Build LibreOffice
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Shallow clone for faster checkout
+      
+      - name: Free up disk space
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          echo "Disk space after cleanup:"
+          df -h
+      
+      - name: Set up ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+      
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf \
+            automake \
+            bison \
+            build-essential \
+            ccache \
+            default-jdk \
+            flex \
+            gperf \
+            libarchive-zip-perl \
+            libcups2-dev \
+            libdbus-1-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libgstreamer1.0-dev \
+            libgtk-3-dev \
+            libice-dev \
+            libjpeg-dev \
+            libkrb5-dev \
+            libldap2-dev \
+            libnss3-dev \
+            libpng-dev \
+            libsm-dev \
+            libssl-dev \
+            libtool \
+            libx11-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxml2-dev \
+            libxml2-utils \
+            libxrandr-dev \
+            libxrender-dev \
+            libxslt1-dev \
+            libxt-dev \
+            make \
+            pkg-config \
+            python3 \
+            python3-dev \
+            unzip \
+            wget \
+            xsltproc \
+            zip
+      
+      - name: Configure ccache
+        run: |
+          ccache --max-size=5G
+          ccache --zero-stats
+      
+      - name: Configure build
+        run: |
+          ./autogen.sh \
+            --disable-ccache \
+            --disable-cups \
+            --disable-dbus \
+            --disable-epm \
+            --disable-firebird-sdbc \
+            --disable-gio \
+            --disable-gstreamer-1-0 \
+            --disable-gtk3 \
+            --disable-gtk4 \
+            --disable-introspection \
+            --disable-ldap \
+            --disable-lotuswordpro \
+            --disable-lpsolve \
+            --disable-mariadb-sdbc \
+            --disable-odk \
+            --disable-online-update \
+            --disable-pdfimport \
+            --disable-pdfium \
+            --disable-postgresql-sdbc \
+            --disable-report-builder \
+            --disable-scripting-beanshell \
+            --disable-scripting-javascript \
+            --disable-sdremote \
+            --disable-sdremote-bluetooth \
+            --enable-python=no \
+            --with-galleries=no \
+            --with-help=no \
+            --with-lang= \
+            --with-myspell-dicts=no \
+            --with-system-libs \
+            --without-doxygen \
+            --without-java \
+            --without-junit \
+            --without-system-dicts \
+            --without-theme
+      
+      - name: Build LibreOffice
+        run: |
+          make -j$(nproc)
+        env:
+          CCACHE_DIR: ~/.ccache
+      
+      - name: Show ccache statistics
+        run: |
+          ccache --show-stats
+      
+      - name: Check build artifacts
+        run: |
+          echo "Build completed successfully!"
+          echo "Listing instdir contents:"
+          if [ -d "instdir" ]; then
+            ls -lh instdir/
+          else
+            echo "No instdir found"
+          fi
+      
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: libreoffice-build-${{ github.sha }}
+          path: |
+            instdir/
+          retention-days: 7
+          if-no-files-found: warn
+
