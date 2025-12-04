@@ -1,13 +1,5 @@
 name: Build LibreOffice (Bundled Libraries)
 
-# This workflow uses LibreOffice's bundled libraries for better reliability
-# Requirements based on LibreOffice official documentation:
-# - Minimum 25 GB free disk space
-# - Minimum 4 GB RAM (8 GB recommended)
-# - GCC 12+ required (ubuntu-latest has GCC 13)
-# - Build time: 1-6 hours depending on hardware
-# - Source: https://wiki.documentfoundation.org/Development/BuildingOnLinux
-
 on:
   push:
     branches: [ main, master ]
@@ -19,154 +11,92 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-      
+
       - name: Free up disk space
         run: |
-          echo "Disk space before cleanup:"
+          echo "Disk before cleanup:"
           df -h
-          # LibreOffice requires at least 25 GB of free disk space
-          # Remove unnecessary tools to free up space
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          sudo rm -rf /opt/hostedtoolcache
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/swift
-          echo "Disk space after cleanup:"
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /usr/local/lib/android /usr/share/swift "$AGENT_TOOLSDIRECTORY" /opt/hostedtoolcache
+          echo "Disk after cleanup:"
           df -h
-      
-      - name: Set up ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ccache-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            ccache-${{ runner.os }}-
-      
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            build-essential \
+            ccache \
             autoconf \
             automake \
             bison \
-            build-essential \
-            ccache \
             flex \
             gperf \
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libice-dev \
-            libkrb5-dev \
-            libnss3-dev \
-            libnspr4-dev \
-            libsm-dev \
-            libx11-dev \
-            libxext-dev \
-            libxinerama-dev \
-            libxrandr-dev \
-            libxrender-dev \
-            libssl-dev \
-            libxt-dev \
             make \
             nasm \
-            perl \
             pkg-config \
+            perl \
             python3 \
             python3-dev \
             unzip \
             wget \
             zip \
-            zlib1g-dev
-      
+            zlib1g-dev \
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libkrb5-dev \
+            libnss3-dev \
+            libnspr4-dev \
+            libx11-dev \
+            libxext-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxrender-dev \
+            libice-dev \
+            libsm-dev \
+            libssl-dev
+
       - name: Configure ccache
         run: |
           ccache --max-size=5G
           ccache --zero-stats
-      
+
       - name: Verify GCC version
         run: |
-          echo "Checking GCC version..."
           gcc --version
           GCC_VERSION=$(gcc -dumpversion | cut -d. -f1)
           if [ "$GCC_VERSION" -lt 12 ]; then
-            echo "ERROR: GCC $GCC_VERSION is too old. LibreOffice requires GCC 12+"
+            echo "ERROR: GCC $GCC_VERSION is too old"
             exit 1
           fi
-          echo "✓ GCC $GCC_VERSION is sufficient"
-      
-      - name: Configure build (using bundled libraries)
+
+      - name: Configure build
         run: |
           ./autogen.sh \
             --disable-ccache \
             --disable-cups \
             --disable-dbus \
-            --disable-epm \
-            --disable-firebird-sdbc \
-            --disable-gio \
-            --disable-gstreamer-1-0 \
             --disable-gtk3 \
             --disable-gtk4 \
-            --disable-introspection \
-            --disable-ldap \
-            --disable-lotuswordpro \
-            --disable-lpsolve \
-            --disable-mariadb-sdbc \
-            --disable-odk \
-            --disable-online-update \
-            --disable-pdfimport \
-            --disable-pdfium \
-            --disable-postgresql-sdbc \
-            --disable-report-builder \
-            --disable-scripting-beanshell \
-            --disable-scripting-javascript \
-            --disable-sdremote \
-            --disable-sdremote-bluetooth \
-            --enable-python=no \
-            --with-galleries=no \
-            --with-help=no \
-            --with-lang= \
-            --with-myspell-dicts=no \
-            --without-doxygen \
-            --without-java \
-            --without-junit \
-            --without-system-dicts \
-            --without-theme
-      
+            --disable-python \
+            --without-java
+
       - name: Build LibreOffice
-        run: |
-          make -j$(nproc)
+        run: make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
-      
-      - name: Show ccache statistics
-        run: |
-          ccache --show-stats
-      
-      - name: Check build artifacts
-        run: |
-          echo "Build completed successfully!"
-          echo "Listing instdir contents:"
-          if [ -d "instdir" ]; then
-            ls -lh instdir/
-          else
-            echo "No instdir found"
-          fi
-      
-      - name: Upload build artifacts
+
+      - name: Show ccache stats
+        run: ccache --show-stats
+
+      - name: Upload artifacts
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: libreoffice-build-bundled-${{ github.sha }}
-          path: |
-            instdir/
+          name: libreoffice-build-${{ github.sha }}
+          path: instdir/
           retention-days: 7
           if-no-files-found: warn
-
