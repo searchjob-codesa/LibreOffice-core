@@ -147,20 +147,18 @@ jobs:
             libtiff-dev \
             libwebp-dev \
             libfreetype6-dev \
-            libfontforge-dev \
             libnumbertext-dev \
             libbox2d-dev \
             libglm-dev \
             libglew-dev \
-            libargon2-dev \
+            libargon2-0-dev \
             libbluetooth-dev \
             libgpg-error-dev \
             libgcrypt20-dev \
             libxmlsec1-dev \
             libxmlsec1-openssl \
             libtommath-dev \
-            libabseil-dev \
-            libqrcodegen-dev \
+            libabsl-dev \
             libdrm-dev \
             libegl1-mesa-dev \
             libgbm-dev
@@ -249,4 +247,3 @@ jobs:
             instdir/
           retention-days: 7
           if-no-files-found: warn
-
