@@ -162,7 +162,8 @@ jobs:
             libdrm-dev \
             libegl1-mesa-dev \
             libgbm-dev \
-            libeot-dev
+            libeot-dev \
+            libmdds-dev
       
       - name: Configure ccache
         run: |
