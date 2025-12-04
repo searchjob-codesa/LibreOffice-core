@@ -151,7 +151,6 @@ jobs:
             libbox2d-dev \
             libglm-dev \
             libglew-dev \
-            libargon2-0-dev \
             libbluetooth-dev \
             libgpg-error-dev \
             libgcrypt20-dev \
@@ -247,3 +246,4 @@ jobs:
             instdir/
           retention-days: 7
           if-no-files-found: warn
+
