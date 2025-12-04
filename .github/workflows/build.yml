@@ -51,10 +51,15 @@ jobs:
       
       - name: Install build dependencies
         run: |
+          # Enable deb-src repositories for build-dep to work
+          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
+          echo "deb-src http://archive.ubuntu.com/ubuntu/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb-src http://archive.ubuntu.com/ubuntu/ $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          
           sudo apt-get update
           
-          # Try to use build-dep for automatic dependency resolution (recommended by LibreOffice docs)
-          sudo apt-get build-dep -y libreoffice || echo "build-dep not available, installing manually"
+          # Use build-dep for automatic dependency resolution (should work now)
+          sudo apt-get build-dep -y libreoffice || echo "build-dep failed, continuing with manual install"
           
           # Install essential packages (some may already be installed by build-dep)
           sudo apt-get install -y \
@@ -163,7 +168,22 @@ jobs:
             libegl1-mesa-dev \
             libgbm-dev \
             libeot-dev \
-            libmdds-dev
+            libmdds-dev \
+            pkg-config \
+            gawk \
+            libpango1.0-dev \
+            libcairo2-dev \
+            libglib2.0-dev \
+            libgtk2.0-dev \
+            libdbus-1-dev \
+            libdbus-glib-1-dev \
+            libgsf-1-dev \
+            libjpeg8-dev \
+            libpng16-16 \
+            libgstreamer-plugins-good1.0-dev \
+            fonts-liberation \
+            fonts-dejavu \
+            fonts-noto
       
       - name: Configure ccache
         run: |
@@ -213,8 +233,6 @@ jobs:
             --with-help=no \
             --with-lang= \
             --with-myspell-dicts=no \
-            --with-system-libs \
-            --without-system-mdds \
             --without-doxygen \
             --without-java \
             --without-junit \
@@ -250,4 +268,3 @@ jobs:
             instdir/
           retention-days: 7
           if-no-files-found: warn
-
