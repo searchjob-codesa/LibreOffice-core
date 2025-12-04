@@ -214,6 +214,7 @@ jobs:
             --with-lang= \
             --with-myspell-dicts=no \
             --with-system-libs \
+            --without-system-mdds \
             --without-doxygen \
             --without-java \
             --without-junit \
