@@ -63,15 +63,18 @@ jobs:
             gperf \
             libfontconfig1-dev \
             libfreetype6-dev \
+            libice-dev \
             libkrb5-dev \
             libnss3-dev \
             libnspr4-dev \
+            libsm-dev \
             libx11-dev \
             libxext-dev \
             libxinerama-dev \
             libxrandr-dev \
             libxrender-dev \
             libssl-dev \
+            libxt-dev \
             make \
             nasm \
             perl \
