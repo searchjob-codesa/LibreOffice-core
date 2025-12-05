@@ -241,15 +241,23 @@ jobs:
             --without-system-dicts \
             --without-theme
       
+      - name: Patch build system to always link gcov
+        run: |
+          # Force gcov to be linked with all targets
+          echo '' >> solenv/gbuild/platform/com_GCC_defs.mk
+          echo '# Force gcov linking for coverage build' >> solenv/gbuild/platform/com_GCC_defs.mk
+          echo 'gb_STDLIBS += -lgcov' >> solenv/gbuild/platform/com_GCC_defs.mk
+          echo 'gb_LinkTarget_LDFLAGS += -lgcov' >> solenv/gbuild/platform/com_GCC_defs.mk
+          cat solenv/gbuild/platform/com_GCC_defs.mk | tail -5
+      
       - name: Build LibreOffice
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
-          # Add coverage flags + ensure gcov is linked
+          # Add coverage flags
           export CFLAGS="--coverage -O0 -g"
           export CXXFLAGS="--coverage -O0 -g"
           export LDFLAGS="--coverage"
-          export LIBS="-lgcov"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
