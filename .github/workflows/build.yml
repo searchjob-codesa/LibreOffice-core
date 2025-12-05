@@ -205,7 +205,7 @@ jobs:
         run: |
           # Use LibreOffice's built-in coverage mode (doesn't affect external libraries)
           ./autogen.sh \
-            --enable-compiler-coverage \
+            --enable-gcov \
             --enable-debug \
             --disable-ccache \
             --disable-cups \
