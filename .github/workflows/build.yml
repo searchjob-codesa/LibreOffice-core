@@ -203,10 +203,10 @@ jobs:
       
       - name: Configure build
         run: |
-          # Set coverage flags for CodeSA
-          export CFLAGS="--coverage -O0 -g"
-          export CXXFLAGS="--coverage -O0 -g"
-          export LDFLAGS="--coverage"
+          # Set coverage flags for CodeSA (using explicit flags to ensure gcov linking)
+          export CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+          export CXXFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+          export LDFLAGS="-fprofile-arcs -ftest-coverage -lgcov"
           
           ./autogen.sh \
             --disable-ccache \
@@ -249,9 +249,9 @@ jobs:
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
-          export CFLAGS="--coverage -O0 -g"
-          export CXXFLAGS="--coverage -O0 -g"
-          export LDFLAGS="--coverage"
+          export CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+          export CXXFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
+          export LDFLAGS="-fprofile-arcs -ftest-coverage -lgcov"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
