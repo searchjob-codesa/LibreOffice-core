@@ -183,9 +183,7 @@ jobs:
             libgstreamer-plugins-good1.0-dev \
             fonts-liberation \
             fonts-dejavu \
-            fonts-noto \
-            gcovr \
-            lcov
+            fonts-noto
       
       - name: Configure ccache
         run: |
@@ -205,17 +203,17 @@ jobs:
       
       - name: Configure build
         run: |
-          # Important: Build WITHOUT coverage flags during configuration
-          # This allows external dependencies to build properly
-          unset CFLAGS
-          unset CXXFLAGS
-          unset LDFLAGS
+          # Enable coverage ONLY for LibreOffice code, use system libs for external deps
+          export CFLAGS="--coverage -O0 -g"
+          export CXXFLAGS="--coverage -O0 -g"
+          export LDFLAGS="--coverage"
           
           ./autogen.sh \
-            --enable-gcov \
             --enable-debug \
+            --enable-symbols \
             --disable-ccache \
-            --disable-skia \
+            --with-system-libs \
+            --without-system-mdds \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
@@ -249,40 +247,16 @@ jobs:
             --without-system-dicts \
             --without-theme
       
-      - name: Build LibreOffice with coverage
+      - name: Build LibreOffice
         run: |
-          # Use ccache-wrapped compilers
           export CC="ccache gcc"
           export CXX="ccache g++"
-          
-          # IMPORTANT: Don't set coverage flags in environment variables
-          # Let LibreOffice's build system handle them internally via --enable-gcov
-          
-          # Build with parallelism
+          export CFLAGS="--coverage -O0 -g"
+          export CXXFLAGS="--coverage -O0 -g"  
+          export LDFLAGS="--coverage"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
-      
-      - name: Generate coverage report
-        if: always()
-        run: |
-          echo "Generating coverage report..."
-          # Collect coverage data
-          find . -name "*.gcda" -o -name "*.gcno" | wc -l
-          
-          # Try to generate a simple report
-          if command -v gcovr &> /dev/null; then
-            echo "Running gcovr..."
-            gcovr --root . --exclude-unreachable-branches --print-summary --html-details coverage.html 2>/dev/null || echo "gcovr failed, but continuing..."
-          fi
-          
-          # Also generate lcov report if available
-          if command -v lcov &> /dev/null; then
-            echo "Running lcov..."
-            lcov --capture --directory . --output-file coverage.info 2>/dev/null || echo "lcov failed, but continuing..."
-            lcov --remove coverage.info '/usr/*' --output-file coverage.filtered.info 2>/dev/null || true
-          fi
-        continue-on-error: true
       
       - name: Run regression tests
         run: |
@@ -309,9 +283,6 @@ jobs:
         with:
           name: coverage-data-${{ github.sha }}
           path: |
-            coverage.html
-            coverage.info
-            coverage.filtered.info
             **/*.gcda
             **/*.gcno
           retention-days: 7
