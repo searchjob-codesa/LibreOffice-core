@@ -241,6 +241,8 @@ jobs:
       
       - name: Build LibreOffice
         run: |
+          export CC="ccache gcc"
+          export CXX="ccache g++"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
