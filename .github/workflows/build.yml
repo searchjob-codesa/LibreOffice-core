@@ -215,6 +215,7 @@ jobs:
             --enable-gcov \
             --enable-debug \
             --disable-ccache \
+            --disable-skia \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
