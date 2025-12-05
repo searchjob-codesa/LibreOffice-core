@@ -203,15 +203,11 @@ jobs:
       
       - name: Configure build
         run: |
-          # Set coverage flags for CodeSA (using explicit flags to ensure gcov linking)
-          export CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
-          export CXXFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
-          export LDFLAGS="-fprofile-arcs -ftest-coverage -lgcov"
-          
+          # Use LibreOffice's built-in coverage mode (doesn't affect external libraries)
           ./autogen.sh \
-            --disable-ccache \
-            --enable-symbols \
+            --enable-compiler-coverage \
             --enable-debug \
+            --disable-ccache \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
@@ -249,9 +245,6 @@ jobs:
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
-          export CFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
-          export CXXFLAGS="-fprofile-arcs -ftest-coverage -O0 -g"
-          export LDFLAGS="-fprofile-arcs -ftest-coverage -lgcov"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
