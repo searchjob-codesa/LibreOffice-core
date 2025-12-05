@@ -214,6 +214,7 @@ jobs:
             --disable-ccache \
             --with-system-libs \
             --without-system-mdds \
+            --without-system-dragonbox \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
