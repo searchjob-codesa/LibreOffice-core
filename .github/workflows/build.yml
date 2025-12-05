@@ -203,8 +203,15 @@ jobs:
       
       - name: Configure build
         run: |
+          # Explicitly set compilers to ensure consistency
+          export CC="gcc"
+          export CXX="g++"
+
           # Use LibreOffice's built-in coverage mode
-          export LDFLAGS="-lgcov"
+          export CFLAGS="--coverage"
+          export CXXFLAGS="--coverage"
+          export LDFLAGS="--coverage"
+          
           ./autogen.sh \
             --enable-gcov \
             --enable-debug \
@@ -246,7 +253,11 @@ jobs:
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
-          export LDFLAGS="-lgcov"
+          export CFLAGS="--coverage"
+          export CXXFLAGS="--coverage"
+          export LDFLAGS="--coverage -lgcov"
+
+          export LD="gcc"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
