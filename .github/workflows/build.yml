@@ -203,8 +203,15 @@ jobs:
       
       - name: Configure build
         run: |
+          # Set coverage flags for CodeSA
+          export CFLAGS="--coverage -O0 -g"
+          export CXXFLAGS="--coverage -O0 -g"
+          export LDFLAGS="--coverage"
+          
           ./autogen.sh \
             --disable-ccache \
+            --enable-symbols \
+            --enable-debug \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
@@ -233,7 +240,6 @@ jobs:
             --with-help=no \
             --with-lang= \
             --with-myspell-dicts=no \
-            --without-doxygen \
             --without-java \
             --without-junit \
             --without-system-dicts \
@@ -243,9 +249,42 @@ jobs:
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
+          export CFLAGS="--coverage -O0 -g"
+          export CXXFLAGS="--coverage -O0 -g"
+          export LDFLAGS="--coverage"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
+      
+      - name: Run regression tests
+        run: |
+          echo "Running LibreOffice regression tests..."
+          make check || echo "Some tests failed, but continuing..."
+        continue-on-error: true
+        timeout-minutes: 60
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ github.sha }}
+          path: |
+            workdir/CppunitTest/
+            workdir/JunitTest/
+            workdir/PythonTest/
+          retention-days: 7
+          if-no-files-found: ignore
+      
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data-${{ github.sha }}
+          path: |
+            **/*.gcda
+            **/*.gcno
+          retention-days: 7
+          if-no-files-found: warn
       
       - name: Show ccache statistics
         run: |
@@ -270,3 +309,4 @@ jobs:
             instdir/
           retention-days: 7
           if-no-files-found: warn
+
