@@ -203,18 +203,11 @@ jobs:
       
       - name: Configure build
         run: |
-          # Enable coverage ONLY for LibreOffice code, use system libs for external deps
-          export CFLAGS="--coverage -O0 -g"
-          export CXXFLAGS="--coverage -O0 -g"
-          export LDFLAGS="--coverage"
-          
+          # Configure without coverage flags (set them during build instead)
           ./autogen.sh \
             --enable-debug \
             --enable-symbols \
             --disable-ccache \
-            --with-system-libs \
-            --without-system-mdds \
-            --without-system-dragonbox \
             --disable-cups \
             --disable-dbus \
             --disable-epm \
@@ -252,9 +245,11 @@ jobs:
         run: |
           export CC="ccache gcc"
           export CXX="ccache g++"
+          # Add coverage flags + ensure gcov is linked
           export CFLAGS="--coverage -O0 -g"
-          export CXXFLAGS="--coverage -O0 -g"  
+          export CXXFLAGS="--coverage -O0 -g"
           export LDFLAGS="--coverage"
+          export LIBS="-lgcov"
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
