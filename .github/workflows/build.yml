@@ -183,7 +183,9 @@ jobs:
             libgstreamer-plugins-good1.0-dev \
             fonts-liberation \
             fonts-dejavu \
-            fonts-noto
+            fonts-noto \
+            gcovr \
+            lcov
       
       - name: Configure ccache
         run: |
@@ -203,15 +205,20 @@ jobs:
       
       - name: Configure build
         run: |
-          # Explicitly set compilers to ensure consistency
+          # Force the use of GCC throughout the entire build chain
+          # Set all compiler and linker variables explicitly
           export CC="gcc"
           export CXX="g++"
-
-          # Use LibreOffice's built-in coverage mode
+          export LD="gcc"
+          export LDXX="g++"
+          
+          # For coverage, we need to use --coverage flag which automatically links gcov
+          # Using -lgcov directly can cause issues
           export CFLAGS="--coverage"
           export CXXFLAGS="--coverage"
           export LDFLAGS="--coverage"
           
+          # Run autogen.sh with coverage enabled
           ./autogen.sh \
             --enable-gcov \
             --enable-debug \
@@ -251,16 +258,41 @@ jobs:
       
       - name: Build LibreOffice
         run: |
+          # Use ccache-wrapped compilers but ensure they're GCC
           export CC="ccache gcc"
           export CXX="ccache g++"
+          
+          # Force GCC as the linker for both C and C++
+          export LD="gcc"
+          export CCLD="gcc"
+          export CXXLD="g++"
+          
+          # Coverage flags - use --coverage which handles everything
           export CFLAGS="--coverage"
           export CXXFLAGS="--coverage"
-          export LDFLAGS="--coverage -lgcov"
-
-          export LD="gcc"
+          export LDFLAGS="--coverage"
+          
+          # Also set linker flags explicitly for C++ linking
+          export LDFLAGS_CXX="--coverage"
+          
+          # Build with parallelism
           make -j$(nproc)
         env:
           CCACHE_DIR: ~/.ccache
+      
+      - name: Generate coverage report
+        if: always()
+        run: |
+          echo "Generating coverage report..."
+          # Collect coverage data
+          find . -name "*.gcda" -o -name "*.gcno" | head -20
+          
+          # Try to generate a simple report
+          gcovr --root . --exclude-unreachable-branches --print-summary --html-details coverage.html 2>/dev/null || echo "Coverage report generation failed, but continuing..."
+          
+          # Also generate lcov report
+          lcov --capture --directory . --output-file coverage.info 2>/dev/null || echo "lcov failed, but continuing..."
+        continue-on-error: true
       
       - name: Run regression tests
         run: |
@@ -287,6 +319,8 @@ jobs:
         with:
           name: coverage-data-${{ github.sha }}
           path: |
+            coverage.html
+            coverage.info
             **/*.gcda
             **/*.gcno
           retention-days: 7
@@ -315,4 +349,3 @@ jobs:
             instdir/
           retention-days: 7
           if-no-files-found: warn
-
