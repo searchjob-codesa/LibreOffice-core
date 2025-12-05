@@ -205,20 +205,12 @@ jobs:
       
       - name: Configure build
         run: |
-          # Force the use of GCC throughout the entire build chain
-          # Set all compiler and linker variables explicitly
-          export CC="gcc"
-          export CXX="g++"
-          export LD="gcc"
-          export LDXX="g++"
+          # Important: Build WITHOUT coverage flags during configuration
+          # This allows external dependencies to build properly
+          unset CFLAGS
+          unset CXXFLAGS
+          unset LDFLAGS
           
-          # For coverage, we need to use --coverage flag which automatically links gcov
-          # Using -lgcov directly can cause issues
-          export CFLAGS="--coverage"
-          export CXXFLAGS="--coverage"
-          export LDFLAGS="--coverage"
-          
-          # Run autogen.sh with coverage enabled
           ./autogen.sh \
             --enable-gcov \
             --enable-debug \
@@ -256,24 +248,14 @@ jobs:
             --without-system-dicts \
             --without-theme
       
-      - name: Build LibreOffice
+      - name: Build LibreOffice with coverage
         run: |
-          # Use ccache-wrapped compilers but ensure they're GCC
+          # Use ccache-wrapped compilers
           export CC="ccache gcc"
           export CXX="ccache g++"
           
-          # Force GCC as the linker for both C and C++
-          export LD="gcc"
-          export CCLD="gcc"
-          export CXXLD="g++"
-          
-          # Coverage flags - use --coverage which handles everything
-          export CFLAGS="--coverage"
-          export CXXFLAGS="--coverage"
-          export LDFLAGS="--coverage"
-          
-          # Also set linker flags explicitly for C++ linking
-          export LDFLAGS_CXX="--coverage"
+          # IMPORTANT: Don't set coverage flags in environment variables
+          # Let LibreOffice's build system handle them internally via --enable-gcov
           
           # Build with parallelism
           make -j$(nproc)
@@ -285,13 +267,20 @@ jobs:
         run: |
           echo "Generating coverage report..."
           # Collect coverage data
-          find . -name "*.gcda" -o -name "*.gcno" | head -20
+          find . -name "*.gcda" -o -name "*.gcno" | wc -l
           
           # Try to generate a simple report
-          gcovr --root . --exclude-unreachable-branches --print-summary --html-details coverage.html 2>/dev/null || echo "Coverage report generation failed, but continuing..."
+          if command -v gcovr &> /dev/null; then
+            echo "Running gcovr..."
+            gcovr --root . --exclude-unreachable-branches --print-summary --html-details coverage.html 2>/dev/null || echo "gcovr failed, but continuing..."
+          fi
           
-          # Also generate lcov report
-          lcov --capture --directory . --output-file coverage.info 2>/dev/null || echo "lcov failed, but continuing..."
+          # Also generate lcov report if available
+          if command -v lcov &> /dev/null; then
+            echo "Running lcov..."
+            lcov --capture --directory . --output-file coverage.info 2>/dev/null || echo "lcov failed, but continuing..."
+            lcov --remove coverage.info '/usr/*' --output-file coverage.filtered.info 2>/dev/null || true
+          fi
         continue-on-error: true
       
       - name: Run regression tests
@@ -321,6 +310,7 @@ jobs:
           path: |
             coverage.html
             coverage.info
+            coverage.filtered.info
             **/*.gcda
             **/*.gcno
           retention-days: 7
