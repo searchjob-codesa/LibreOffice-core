@@ -1,4 +1,4 @@
-equirements based on LibreOffice official documentation:
+# equirements based on LibreOffice official documentation:
 # - Minimum 25 GB free disk space
 # - Minimum 4 GB RAM (8 GB recommended)
 # - GCC 12+ required (ubuntu-latest has GCC 13)
