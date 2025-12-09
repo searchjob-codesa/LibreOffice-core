@@ -163,6 +163,7 @@ jobs:
               libboost-filesystem-dev \
               libsane-dev \
               unixodbc-dev \
+              libcurl4-openssl-dev \
               doxygen
       
       - name: Verify GCC version
