@@ -180,7 +180,6 @@ jobs:
         run: |
           # Configure without coverage flags (set them during build instead)
           ./autogen.sh \
-              # --with-distro=CPLinux-LOKit \
               --disable-epm \
               --without-package-format \
               --enable-debug \
