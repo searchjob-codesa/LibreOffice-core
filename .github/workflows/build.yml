@@ -236,7 +236,7 @@ jobs:
                  --without-system-dicts \
                  --without-theme \
                  --with-doxygen=/usr/bin/doxygen \
-                 --with-help=html
+                 --with-help=online
       
       - name: Build LibreOffice
         run: |
@@ -262,5 +262,5 @@ jobs:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
           api_key: ${{ secrets.APICOV_KEY }}
-          doxygen_path: ${{ github.workspace }}/instdir/help
+          doxygen_path: ${{ github.workspace }}/instdir
           compile: gcc
