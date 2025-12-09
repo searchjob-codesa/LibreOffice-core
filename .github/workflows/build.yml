@@ -261,7 +261,7 @@ jobs:
         continue-on-error: true
       
       - name: Run ApiCov analysis
-        uses: codesa-ai/ApiCov@v.0.3.13-pre
+        uses: codesa-ai/ApiCov@v0.3.14-pre
         with:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
