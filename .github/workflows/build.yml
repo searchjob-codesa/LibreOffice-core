@@ -239,7 +239,7 @@ jobs:
                  --without-system-dicts \
                  --without-theme \
                  --with-doxygen=/usr/bin/doxygen \
-                 --with-help=online
+                 --with-help=html
       
       - name: Build LibreOffice
         run: |
@@ -257,13 +257,16 @@ jobs:
         run: |
           echo "Generating Doxygen documentation..."
           make helpcontent2|| echo "Doxygen generation failed, continuing..."
+          make autodoc
         continue-on-error: true
       
       - name: Run ApiCov analysis
-        uses: codesa-ai/ApiCov@v0.3.12-pre
+        uses: codesa-ai/ApiCov@v0.3.13-pre
         with:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
           api_key: ${{ secrets.APICOV_KEY }}
-          doxygen_path: ${{ github.workspace }}/instdir
+          doxygen_path: ${{ github.workspace }}/instdir/help
           compile: gcc
+          api_source: headers
+          headers_dir: ${{ github.workspace }}/include/LibreOfficeKit
