@@ -157,7 +157,7 @@ jobs:
               fonts-liberation \
               fonts-dejavu \
               fonts-noto \
-              libcmis-0.6-dev \
+              libcmis-dev \
               libboost-locale-dev \
               libboost-system-dev \
               libboost-filesystem-dev \
