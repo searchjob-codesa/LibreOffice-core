@@ -41,7 +41,6 @@ jobs:
               build-essential \
               zip \
               junit4 \
-              libcurl4-gnutls-dev \
               libkrb5-dev \
               nasm \
               graphviz \
