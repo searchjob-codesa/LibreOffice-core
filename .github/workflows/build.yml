@@ -248,3 +248,18 @@ jobs:
           make check || echo "Some tests failed, but continuing..."
         continue-on-error: true
         timeout-minutes: 60
+      
+      - name: Generate Doxygen documentation
+        run: |
+          echo "Generating Doxygen documentation..."
+          make docs || echo "Doxygen generation failed, continuing..."
+        continue-on-error: true
+      
+      - name: Run ApiCov analysis
+        uses: codesa-ai/ApiCov@v0.3.12-pre
+        with:
+          root_path: ${{ github.workspace }}
+          install_path: ${{ github.workspace }}/instdir
+          api_key: ${{ secrets.APICOV_API_KEY }}
+          doxygen_path: ${{ github.workspace }}/docs/doxygen/html
+          compile: gcc
