@@ -235,7 +235,8 @@ jobs:
                  --without-junit \
                  --without-system-dicts \
                  --without-theme \
-                 --with-doxygen=/usr/bin/doxygen
+                 --with-doxygen=/usr/bin/doxygen \
+                 --with-help=html
       
       - name: Build LibreOffice
         run: |
@@ -252,7 +253,7 @@ jobs:
       - name: Generate Doxygen documentation
         run: |
           echo "Generating Doxygen documentation..."
-          make docs || echo "Doxygen generation failed, continuing..."
+          make helpcontent2|| echo "Doxygen generation failed, continuing..."
         continue-on-error: true
       
       - name: Run ApiCov analysis
@@ -261,5 +262,5 @@ jobs:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
           api_key: ${{ secrets.APICOV_KEY }}
-          doxygen_path: ${{ github.workspace }}/docs/doxygen/html
+          doxygen_path: ${{ github.workspace }}/instdir/help
           compile: gcc
