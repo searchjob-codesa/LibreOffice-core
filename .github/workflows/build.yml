@@ -260,6 +260,6 @@ jobs:
         with:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
-          api_key: ${{ secrets.APICOV_API_KEY }}
+          api_key: ${{ secrets.APICOV_KEY }}
           doxygen_path: ${{ github.workspace }}/docs/doxygen/html
           compile: gcc
