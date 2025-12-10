@@ -263,18 +263,54 @@ jobs:
         
       - name: Generate Doxygen documentation
         run: |
-          echo "Generating Doxygen documentation..."
-          make helpcontent2|| echo "Doxygen generation failed, continuing..."
-          make autodoc
+          cat > LOK_Doxyfile << 'EOF'
+          PROJECT_NAME           = "LibreOfficeKit API"
+          PROJECT_BRIEF          = "LibreOffice Kit C/C++ API Documentation"
+          OUTPUT_DIRECTORY       = lok_docs
+          
+          EXTRACT_ALL            = YES
+          EXTRACT_STATIC         = YES
+          SOURCE_BROWSER         = YES
+          REFERENCED_BY_RELATION = YES
+          REFERENCES_RELATION    = YES
+          
+          INPUT                  = include/LibreOfficeKit
+          RECURSIVE              = YES
+          FILE_PATTERNS          = *.h *.hxx *.hpp
+          
+          GENERATE_HTML          = YES
+          HTML_OUTPUT            = html
+          GENERATE_TREEVIEW      = YES
+          
+          GENERATE_LATEX         = NO
+          GENERATE_XML           = YES
+          
+          ENABLE_PREPROCESSING   = YES
+          MACRO_EXPANSION        = YES
+          EXPAND_ONLY_PREDEF     = YES
+          PREDEFINED             = __cplusplus \
+                                   SAL_CALL= \
+                                   SAL_DLLPUBLIC_EXPORT= \
+                                   SAL_DLLPUBLIC_IMPORT= \
+                                   SAL_DEPRECATED(x)= \
+                                   LOK_DLLPUBLIC=
+          
+          HAVE_DOT               = NO
+          JAVADOC_AUTOBRIEF      = YES
+          QUIET                  = NO
+          WARNINGS               = YES
+          EOF
+          doxygen LOK_Doxyfile
         continue-on-error: true
       
       - name: Run ApiCov analysis
-        uses: codesa-ai/ApiCov@v0.3.16-pre
+        uses: codesa-ai/ApiCov@v0.3.17-pre
         with:
           root_path: ${{ github.workspace }}
           install_path: ${{ github.workspace }}/instdir
           api_key: ${{ secrets.APICOV_KEY }}
-          doxygen_path: ${{ github.workspace }}/instdir/help
+          doxygen_path: ${{ github.workspace }}/lok_docs/xml
           compile: gcc
           api_source: headers
+          xml: true
           headers_dir: ${{ github.workspace }}/include/LibreOfficeKit
