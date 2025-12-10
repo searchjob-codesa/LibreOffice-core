@@ -253,7 +253,14 @@ jobs:
           make check || echo "Some tests failed, but continuing..."
         continue-on-error: true
         timeout-minutes: 60
-      
+
+      - name: Run coverage tests
+        run: |
+          echo "Running LibreOffice coverage tests..."
+          make coverage || echo "Some tests failed, but continuing..."
+        continue-on-error: true
+        timeout-minutes: 60
+        
       - name: Generate Doxygen documentation
         run: |
           echo "Generating Doxygen documentation..."
