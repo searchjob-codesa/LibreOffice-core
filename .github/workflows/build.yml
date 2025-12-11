@@ -188,12 +188,10 @@ jobs:
           ./autogen.sh \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
-              --enable-symbols \
               --with-distro=CPLinux-LOKit \
               --disable-epm \
               --without-package-format \
-              --with-doxygen=/usr/bin/doxygen \
-              --with-help=html
+              --with-doxygen=/usr/bin/doxygen 
       
       - name: Build LibreOffice
         run: |
