@@ -182,23 +182,11 @@ jobs:
       
       - name: Configure build
         run: |
-          # Configure without coverage flags (set them during build instead)
+          # Configure with coverage flags for compilation and linking
           ./autogen.sh \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
-              --with-system-libs \
-              --with-system-md4c=no \
-              --with-system-xmlsec=no \
-              --with-system-mdds=no \
-              --with-system-dragonbox=no \
-              --with-system-fast-float=no \
-              --with-system-frozen=no \
-              --with-system-libfixmath=no \
-              --with-system-orcus=no \
-              --with-system-harfbuzz=no \
-              --with-system-graphite=no \
-              --with-system-argon2=no \
-              --with-system-zxcvbn=no \
+              --with-extra-ld-flags="--coverage" \
               --enable-symbols \
               --with-distro=CPLinux-LOKit \
               --disable-epm \
