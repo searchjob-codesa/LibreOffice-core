@@ -7,9 +7,9 @@
 
 on:
   push:
-    branches: [ master, distro/collabora/co-25.04 ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ master, distro/collabora/co-25.04 ]
+    branches: [ master, main ]
   workflow_dispatch:
 
 jobs:
@@ -21,7 +21,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: distro/collabora/co-25.04
           submodules: recursive
           fetch-depth: 0 # Shallow clone for faster checkout
 
