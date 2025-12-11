@@ -190,7 +190,7 @@ jobs:
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
               --with-system-libpng \
-              --with-system-libjpeg \
+              --with-system-jpeg \
               --with-system-freetype \
               --disable-epm \
               --without-package-format \
