@@ -186,6 +186,7 @@ jobs:
           ./autogen.sh \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
+              --with-extra-ldflags="--coverage" \
               --enable-symbols \
               --with-distro=CPLinux-LOKit \
               --disable-epm \
