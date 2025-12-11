@@ -186,8 +186,6 @@ jobs:
           # Set LDFLAGS to include coverage for linking gcov runtime
           export LDFLAGS="-lgcov"
           ./autogen.sh \
-              --with-extra-cc-flags="--coverage" \
-              --with-extra-cxx-flags="--coverage" \
               --with-distro=CPLinux-LOKit \
               --disable-epm \
               --without-package-format \
