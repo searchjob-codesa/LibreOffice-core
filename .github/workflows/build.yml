@@ -184,7 +184,7 @@ jobs:
         run: |
           # Configure with coverage flags for compilation and linking
           # Set LDFLAGS to include coverage for linking gcov runtime
-          export LDFLAGS="--coverage"
+          export LDFLAGS="-lgcov"
           ./autogen.sh \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
@@ -196,6 +196,7 @@ jobs:
       - name: Build LibreOffice
         run: |
             # Set compiler
+            export LDFLAGS="-lgcov"
             make -j$(nproc)
       
       - name: Run regression tests
