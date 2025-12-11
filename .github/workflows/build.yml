@@ -183,10 +183,11 @@ jobs:
       - name: Configure build
         run: |
           # Configure with coverage flags for compilation and linking
+          # Set LDFLAGS to include coverage for linking gcov runtime
+          export LDFLAGS="--coverage"
           ./autogen.sh \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
-              --with-extra-ld-flags="--coverage" \
               --enable-symbols \
               --with-distro=CPLinux-LOKit \
               --disable-epm \
