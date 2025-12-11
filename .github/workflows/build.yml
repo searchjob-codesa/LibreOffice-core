@@ -187,6 +187,9 @@ jobs:
           export LDFLAGS="-lgcov"
           ./autogen.sh \
               --with-distro=CPLinux-LOKit \
+              --extra-cc-flags="--coverage" \
+              --extra-cxx-flags="--coverage" \
+              --with-system-libpng \
               --disable-epm \
               --without-package-format \
               --with-doxygen=/usr/bin/doxygen 
