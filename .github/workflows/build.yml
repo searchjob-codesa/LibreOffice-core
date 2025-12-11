@@ -7,9 +7,9 @@
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master, distro/collabora/co-25.04 ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ master, distro/collabora/co-25.04 ]
   workflow_dispatch:
 
 jobs:
@@ -21,6 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: distro/collabora/co-25.04
           submodules: recursive
           fetch-depth: 0 # Shallow clone for faster checkout
 
@@ -184,63 +185,14 @@ jobs:
         run: |
           # Configure without coverage flags (set them during build instead)
           ./autogen.sh \
-              --disable-epm \
-              --without-package-format \
-              --enable-debug \
               --with-extra-cc-flags="--coverage" \
               --with-extra-cxx-flags="--coverage" \
-              --with-system-libs \
-              --with-system-md4c=no \
-              --with-system-xmlsec=no \
-              --with-system-mdds=no \
-              --with-system-dragonbox=no \
-              --with-system-fast-float=no \
-              --with-system-frozen=no \
-              --with-system-libfixmath=no \
-              --with-system-orcus=no \
-              --with-system-harfbuzz=no \
-              --with-system-graphite=no \
-              --with-system-argon2=no \
-              --with-system-zxcvbn=no \
-              --disable-firebird-sdbc \
-              --disable-skia \
               --enable-symbols \
-                 --disable-cups \
-                 --disable-zxing \
-                 --disable-coinmp \
-                 --disable-gpgmepp \
-                 --disable-dbus \
-                 --disable-epm \
-                 --disable-libcmis \
-                 --disable-gio \
-                 --disable-gstreamer-1-0 \
-                 --disable-gtk3 \
-                 --disable-gtk4 \
-                 --disable-introspection \
-                 --disable-ldap \
-                 --disable-lotuswordpro \
-                 --disable-lpsolve \
-                 --disable-mariadb-sdbc \
-                 --disable-odk \
-                 --disable-online-update \
-                 --disable-pdfimport \
-                 --disable-pdfium \
-                 --disable-postgresql-sdbc \
-                 --disable-report-builder \
-                 --disable-scripting-beanshell \
-                 --disable-scripting-javascript \
-                 --disable-sdremote \
-                 --disable-sdremote-bluetooth \
-                 --enable-python=no \
-                 --with-galleries=no \
-                 --with-help=no \
-                 --with-myspell-dicts=no \
-                 --without-java \
-                 --without-junit \
-                 --without-system-dicts \
-                 --without-theme \
-                 --with-doxygen=/usr/bin/doxygen \
-                 --with-help=html
+              --with-distro=CPLinux-LOKit \
+              --disable-epm \
+              --without-package-format \
+              --with-doxygen=/usr/bin/doxygen \
+              --with-help=html
       
       - name: Build LibreOffice
         run: |
