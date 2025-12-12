@@ -200,6 +200,8 @@ jobs:
         run: |
             # Set compiler
             export LDFLAGS="-lgcov"
+            export CFLAGS="--coverage"
+            export CXXFLAGS="--coverage"
             make -j$(nproc)
       
       - name: Run regression tests
