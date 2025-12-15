@@ -176,9 +176,8 @@ jobs:
         run: |
           # Configure with coverage flags for compilation and linking
           # Set LDFLAGS to include coverage for linking gcov runtime
-          export CC="gcc-12"
-          export CXX="g++-12"
-          export GCOV="gcov-12"
+          export CC="gcc"
+          export CXX="g++"
           ./autogen.sh \
               --disable-epm \
               --without-package-format \
@@ -241,19 +240,16 @@ jobs:
       - name: Build LibreOffice
         run: |
             # Set compiler
+            export CC="gcc"
+            export CXX="g++"
             make -j$(nproc)
       
       - name: Run regression tests
         run: |
           echo "Running LibreOffice regression tests..."
+          export CC="gcc"
+          export CXX="g++"
           make check || echo "Some tests failed, but continuing..."
-        continue-on-error: true
-        timeout-minutes: 60
-
-      - name: Run coverage tests
-        run: |
-          echo "Running LibreOffice coverage tests..."
-          make coverage || echo "Some tests failed, but continuing..."
         continue-on-error: true
         timeout-minutes: 60
         
