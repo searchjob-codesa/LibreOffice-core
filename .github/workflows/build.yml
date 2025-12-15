@@ -310,4 +310,3 @@ jobs:
           api_source: headers
           xml: true
           headers_dir: ${{ github.workspace }}/include/LibreOfficeKit
-
