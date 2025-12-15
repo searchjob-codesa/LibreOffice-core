@@ -1,0 +1,312 @@
+# equirements based on LibreOffice official documentation:
+# - Minimum 25 GB free disk space
+# - Minimum 4 GB RAM (8 GB recommended)
+# - GCC 12+ required (ubuntu-latest has GCC 13)
+# - Build time: 1-6 hours depending on hardware
+# - Source: https://wiki.documentfoundation.org/Development/BuildingOnLinux
+
+on:
+  push:
+    branches: [ distro/collabora/co-25.04, distro/collabora/co-25.04]
+  pull_request:
+    branches: [ distro/collabora/co-25.04, distro/collabora/co-25.04]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: self-hosted
+    timeout-minutes: 360
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # Shallow clone for faster checkout
+
+      
+      
+      - name: Install build dependencies
+        run: |
+          # Enable deb-src repositories for build-dep to work
+          sudo sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
+          echo "deb-src http://archive.ubuntu.com/ubuntu/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          echo "deb-src http://archive.ubuntu.com/ubuntu/ $(lsb_release -cs)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list
+          
+          sudo apt-get update
+          
+          # Use build-dep for automatic dependency resolution (should work now)
+          sudo apt-get build-dep -y libreoffice || echo "build-dep failed, continuing with manual install"
+          
+          # Install essential packages (some may already be installed by build-dep)
+          sudo apt-get install -y \
+              gcc-12 \
+              g++-12 \
+              lcov \
+              git \
+              build-essential \
+              zip \
+              junit4 \
+              libkrb5-dev \
+              nasm \
+              graphviz \
+              python3 \
+              python3-dev \
+              python3-setuptools \
+              autoconf \
+              libcups2-dev \
+              libfontconfig1-dev \
+              gperf \
+              openjdk-17-jdk \
+              doxygen \
+              libxslt1-dev \
+              xsltproc \
+              libxml2-utils \
+              libxrandr-dev \
+              libx11-dev \
+              bison \
+              flex \
+              libgtk-3-dev \
+              libgstreamer-plugins-base1.0-dev \
+              libgstreamer1.0-dev \
+              ant \
+              ant-optional \
+              libnss3-dev \
+              libavahi-client-dev \
+              libxt-dev \
+              meson \
+              libcmis-dev \
+              libabw-dev \
+              libcdr-dev \
+              libclucene-dev \
+              libe-book-dev \
+              libepubgen-dev \
+              libetonyek-dev \
+              libexttextcat-dev \
+              libfreehand-dev \
+              liblangtag-dev \
+              libmspub-dev \
+              libmwaw-dev \
+              libmythes-dev \
+              libodfgen-dev \
+              liborcus-dev \
+              libpagemaker-dev \
+              libqxp-dev \
+              librevenge-dev \
+              libstaroffice-dev \
+              libvisio-dev \
+              libwpd-dev \
+              libwpg-dev \
+              libwps-dev \
+              libzmf-dev \
+              libboost-dev \
+              libboost-date-time-dev \
+              libboost-filesystem-dev \
+              libboost-iostreams-dev \
+              libboost-program-options-dev \
+              libcppunit-dev \
+              libepoxy-dev \
+              libgpgme-dev \
+              libgraphite2-dev \
+              libharfbuzz-dev \
+              libhunspell-dev \
+              libhyphen-dev \
+              libicu-dev \
+              liblcms2-dev \
+              libmd4c-dev \
+              libneon27-dev \
+              libpoppler-cpp-dev \
+              libpoppler-dev \
+              libraptor2-dev \
+              librasqal3-dev \
+              librdf0-dev \
+              libssl-dev \
+              libtool \
+              unzip \
+              wget \
+              zlib1g-dev \
+              libexpat1-dev \
+              libjpeg-dev \
+              libpng-dev \
+              libtiff-dev \
+              libwebp-dev \
+              libfreetype6-dev \
+              libnumbertext-dev \
+              libbox2d-dev \
+              libglm-dev \
+              libglew-dev \
+              libbluetooth-dev \
+              libgpg-error-dev \
+              libgcrypt20-dev \
+              libxmlsec1-dev \
+              libxmlsec1-openssl \
+              libtommath-dev \
+              libabsl-dev \
+              libdrm-dev \
+              libegl1-mesa-dev \
+              libgbm-dev \
+              libeot-dev \
+              libmdds-dev \
+              pkg-config \
+              gawk \
+              libpango1.0-dev \
+              libcairo2-dev \
+              libglib2.0-dev \
+              libgtk2.0-dev \
+              libdbus-1-dev \
+              libdbus-glib-1-dev \
+              libgsf-1-dev \
+              libjpeg8-dev \
+              libpng16-16 \
+              libgstreamer-plugins-good1.0-dev \
+              fonts-liberation \
+              fonts-dejavu \
+              fonts-noto \
+              libcmis-dev \
+              libboost-locale-dev \
+              libboost-system-dev \
+              libboost-filesystem-dev \
+              libsane-dev \
+              unixodbc-dev \
+              libcurl4-gnutls-dev \
+              libpoppler-dev \
+              doxygen
+
+          
+      - name: Configure build
+        run: |
+          # Configure with coverage flags for compilation and linking
+          # Set LDFLAGS to include coverage for linking gcov runtime
+          export CC="gcc-12"
+          export CXX="g++-12"
+          ./autogen.sh \
+              --disable-epm \
+              --without-package-format \
+              --enable-debug \
+              --with-extra-cc-flags="--coverage" \
+              --with-extra-cxx-flags="--coverage" \
+              --with-system-libs \
+              --with-system-md4c=no \
+              --with-system-xmlsec=no \
+              --with-system-mdds=no \
+              --with-system-dragonbox=no \
+              --with-system-fast-float=no \
+              --with-system-frozen=no \
+              --with-system-libfixmath=no \
+              --with-system-orcus=no \
+              --with-system-harfbuzz=no \
+              --with-system-graphite=no \
+              --with-system-argon2=no \
+              --with-system-zxcvbn=no \
+              --disable-firebird-sdbc \
+              --disable-skia \
+              --enable-symbols \
+              --disable-cups \
+              --disable-zxing \
+              --disable-coinmp \
+              --disable-gpgmepp \
+              --disable-dbus \
+              --disable-epm \
+              --disable-libcmis \
+              --disable-gio \
+              --disable-gstreamer-1-0 \
+              --disable-gtk3 \
+              --disable-gtk4 \
+              --disable-introspection \
+              --disable-ldap \
+              --disable-lotuswordpro \
+              --disable-lpsolve \
+              --disable-mariadb-sdbc \
+              --disable-odk \
+              --disable-online-update \
+              --disable-pdfimport \
+              --disable-pdfium \
+              --disable-postgresql-sdbc \
+              --disable-report-builder \
+              --disable-scripting-beanshell \
+              --disable-scripting-javascript \
+              --disable-sdremote \
+              --disable-sdremote-bluetooth \
+              --enable-python=no \
+              --with-galleries=no \
+              --with-help=no \
+              --with-myspell-dicts=no \
+              --without-java \
+              --without-junit \
+              --without-system-dicts \
+              --without-theme \
+              --with-doxygen=/usr/bin/doxygen \
+              --with-help=html
+      
+      - name: Build LibreOffice
+        run: |
+            # Set compiler
+            make -j$(nproc)
+      
+      - name: Run regression tests
+        run: |
+          echo "Running LibreOffice regression tests..."
+          make check || echo "Some tests failed, but continuing..."
+        continue-on-error: true
+        timeout-minutes: 60
+
+      - name: Run coverage tests
+        run: |
+          echo "Running LibreOffice coverage tests..."
+          make coverage || echo "Some tests failed, but continuing..."
+        continue-on-error: true
+        timeout-minutes: 60
+        
+      - name: Generate Doxygen documentation
+        run: |
+          cat > LOK_Doxyfile << 'EOF'
+          PROJECT_NAME           = "LibreOfficeKit API"
+          PROJECT_BRIEF          = "LibreOffice Kit C/C++ API Documentation"
+          OUTPUT_DIRECTORY       = lok_docs
+          
+          EXTRACT_ALL            = YES
+          EXTRACT_STATIC         = YES
+          SOURCE_BROWSER         = YES
+          REFERENCED_BY_RELATION = YES
+          REFERENCES_RELATION    = YES
+          
+          INPUT                  = include/LibreOfficeKit
+          RECURSIVE              = YES
+          FILE_PATTERNS          = *.h *.hxx *.hpp
+          
+          GENERATE_HTML          = YES
+          HTML_OUTPUT            = html
+          GENERATE_TREEVIEW      = YES
+          
+          GENERATE_LATEX         = NO
+          GENERATE_XML           = YES
+          
+          ENABLE_PREPROCESSING   = YES
+          MACRO_EXPANSION        = YES
+          EXPAND_ONLY_PREDEF     = YES
+          PREDEFINED             = __cplusplus \
+                                   SAL_CALL= \
+                                   SAL_DLLPUBLIC_EXPORT= \
+                                   SAL_DLLPUBLIC_IMPORT= \
+                                   SAL_DEPRECATED(x)= \
+                                   LOK_DLLPUBLIC=
+          
+          HAVE_DOT               = NO
+          JAVADOC_AUTOBRIEF      = YES
+          QUIET                  = NO
+          WARNINGS               = YES
+          EOF
+          doxygen LOK_Doxyfile
+        continue-on-error: true
+      
+      - name: Run ApiCov analysis
+        uses: codesa-ai/ApiCov@v0.3.22-pre
+        with:
+          root_path: ${{ github.workspace }}
+          install_path: ${{ github.workspace }}/instdir
+          api_key: ${{ secrets.APICOV_KEY }}
+          doxygen_path: ${{ github.workspace }}/lok_docs/xml
+          compile: gcc
+          api_source: headers
+          xml: true
+          headers_dir: ${{ github.workspace }}/include/LibreOfficeKit
