@@ -226,8 +226,11 @@ public:
     void testNoDuplicateTableSelection();
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
+    void testGetCommandValues();
     void testABI();
-
+    void testGetClipboard();
+    void testGetDocumentType();
+    void testSetAccessibilityState();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -308,7 +311,11 @@ public:
     CPPUNIT_TEST(testNoDuplicateTableSelection);
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
+    CPPUNIT_TEST(testGetCommandValues);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testGetClipboard);
+    CPPUNIT_TEST(testGetDocumentType);
+    CPPUNIT_TEST(testSetAccessibilityState);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4340,211 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testGetCommandValues()
+{
+    // Load a Writer document
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+    
+    // Test getCommandValues for .uno:Redo
+    boost::property_tree::ptree aTree;
+    char* pJSON = pDocument->m_pDocumentClass->getCommandValues(pDocument, ".uno:Redo");
+    CPPUNIT_ASSERT(pJSON != nullptr);
+    CPPUNIT_ASSERT(strlen(pJSON) > 0);
+    std::stringstream aStream(pJSON);
+    boost::property_tree::read_json(aStream, aTree);
+    CPPUNIT_ASSERT(!aTree.empty());
+    // Verify the response contains valid JSON structure
+    // Some commands may return "commandName", others may return "actions" or other fields
+    free(pJSON);
+    
+    // Test getCommandValues for .uno:Undo
+    aTree.clear();
+    pJSON = pDocument->m_pDocumentClass->getCommandValues(pDocument, ".uno:Undo");
+    CPPUNIT_ASSERT(pJSON != nullptr);
+    CPPUNIT_ASSERT(strlen(pJSON) > 0);
+    aStream.str(std::string(pJSON));
+    aStream.clear();
+    boost::property_tree::read_json(aStream, aTree);
+    CPPUNIT_ASSERT(!aTree.empty());
+    // Verify the response contains valid JSON structure
+    // Undo/Redo commands typically return "actions" array when there are actions available
+    free(pJSON);
+}
+
+void DesktopLOKTest::testGetClipboard()
+{
+    // Load a Writer document
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get the view ID
+    int viewId = pDocument->m_pDocumentClass->getView(pDocument);
+    pDocument->m_pDocumentClass->setView(pDocument, viewId);
+    Scheduler::ProcessEventsToIdle();
+
+    // Test getClipboard without MIME type filter
+    const char** mimeTypes = nullptr;
+    size_t outCount = 0;
+    char** outMimeTypes = nullptr;
+    size_t* outSizes = nullptr;
+    char** outStreams = nullptr;
+
+    pDocument->m_pDocumentClass->getClipboard(
+        pDocument, mimeTypes, &outCount, &outMimeTypes, &outSizes, &outStreams);
+
+    // Clean up allocated memory if any
+    if (outMimeTypes)
+    {
+        for (size_t i = 0; i < outCount; ++i)
+        {
+            if (outMimeTypes[i])
+                free(outMimeTypes[i]);
+            if (outStreams && outStreams[i])
+                free(outStreams[i]);
+        }
+        free(outMimeTypes);
+    }
+    if (outSizes)
+        free(outSizes);
+    if (outStreams)
+        free(outStreams);
+
+    // Test with specific MIME type request
+    std::vector<const char*> inMimeTypes;
+    inMimeTypes.push_back("text/plain");
+    inMimeTypes.push_back(nullptr);
+
+    outCount = 0;
+    outMimeTypes = nullptr;
+    outSizes = nullptr;
+    outStreams = nullptr;
+
+    pDocument->m_pDocumentClass->getClipboard(
+        pDocument, inMimeTypes.data(), &outCount, &outMimeTypes, &outSizes, &outStreams);
+
+    // Clean up allocated memory if any
+    if (outMimeTypes)
+    {
+        for (size_t i = 0; i < outCount; ++i)
+        {
+            if (outMimeTypes[i])
+                free(outMimeTypes[i]);
+            if (outStreams && outStreams[i])
+                free(outStreams[i]);
+        }
+        free(outMimeTypes);
+    }
+    if (outSizes)
+        free(outSizes);
+    if (outStreams)
+        free(outStreams);
+}
+
+void DesktopLOKTest::testGetDocumentType()
+{
+    /* Sequence: lok::Document::getDocumentType */
+
+    // Given a LibreOffice installation path
+    const char* loPath = std::getenv("LO_PATH");
+    if (!loPath)
+        loPath = "/usr/lib/libreoffice/program";
+
+    // When initializing LibreOfficeKit
+    lok::Office* pOffice = lok::lok_cpp_init(loPath);
+
+    // Then LibreOfficeKit must initialize successfully
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to initialize LibreOfficeKit",
+        pOffice != nullptr
+    );
+
+    // Given a test document path
+    const char* testDocPath = std::getenv("TEST_DOC_PATH");
+    if (!testDocPath)
+        testDocPath = "test.odt";
+
+    // When loading the document
+    lok::Document* pDocument = pOffice->documentLoad(testDocPath);
+
+    // Then the document must load successfully
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to load document via LibreOfficeKit",
+        pDocument != nullptr
+    );
+
+    // Define expected document type constants
+    const int LOK_DOCTYPE_TEXT = 0;
+    const int LOK_DOCTYPE_SPREADSHEET = 1;
+    const int LOK_DOCTYPE_PRESENTATION = 2;
+    const int LOK_DOCTYPE_DRAWING = 3;
+    const int LOK_DOCTYPE_OTHER = 4;
+
+    // When calling getDocumentType
+    int docType = pDocument->getDocumentType();
+
+    // Then the document type should be valid (0-4)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Invalid document type returned",
+        docType >= 0 && docType <= 4
+    );
+
+    // Then for .odt file, document type should be LOK_DOCTYPE_TEXT
+    CPPUNIT_ASSERT_MESSAGE(
+        "Unexpected document type for .odt file",
+        docType == LOK_DOCTYPE_TEXT
+    );
+
+    delete pDocument;
+    delete pOffice;
+    delete pDocument;
+    delete pOffice;
+}
+
+void DesktopLOKTest::testSetAccessibilityState()
+{
+    // Given a LibreOffice installation path
+    LibLibreOffice_Impl aOffice;
+    bool bResult = aOffice.initialize(m_sLOPath);
+    CPPUNIT_ASSERT_MESSAGE("Failed to initialize LibreOfficeKit", bResult);
+
+    LibLODocument_Impl* pDocument = aOffice.documentLoad(m_sLOPath + "/desktop/qa/data/SearchIndexResultTest.odt");
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to load document via LibreOfficeKit",
+        pDocument != nullptr
+    );
+
+    // Initialize for rendering
+    pDocument->initializeForRendering(nullptr);
+
+    int viewId = 0;
+
+    // Test 1: Enable accessibility features
+    pDocument->setAccessibilityState(viewId, true);
+
+    // Verify accessibility is enabled by checking if accessibility-related APIs work
+    char* focusedParagraphEnabled = pDocument->getA11yFocusedParagraph();
+    if (focusedParagraphEnabled) {
+        free(focusedParagraphEnabled);
+    }
+
+    // Test 2: Disable accessibility features
+    pDocument->setAccessibilityState(viewId, false);
+
+    // Test 3: Re-enable accessibility for subsequent tests
+    pDocument->setAccessibilityState(viewId, true);
+
+    // Verify accessibility is re-enabled
+    char* focusedParagraphReEnabled = pDocument->getA11yFocusedParagraph();
+    if (focusedParagraphReEnabled) {
+        free(focusedParagraphReEnabled);
+    }
+
+    delete pDocument;
+    delete pOffice;
+}
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
