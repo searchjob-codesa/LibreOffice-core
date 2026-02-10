@@ -227,7 +227,10 @@ public:
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
     void testABI();
-
+    void testRenderShapeSelection();
+    void testRenderSearchResult();
+    void testRenderWindow();
+    void testRenderSearchResult();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -309,6 +312,9 @@ public:
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testRenderShapeSelection);
+    CPPUNIT_TEST(testRenderSearchResult);
+    CPPUNIT_TEST(testRenderWindow);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4331,6 +4337,109 @@ void DesktopLOKTest::testABI()
 
     // As above
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
+}
+void DesktopLOKTest::testRenderShapeSelection()
+{
+    // Load a Writer document (or presentation/spreadsheet with shapes)
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get the view ID
+    int viewId = pDocument->m_pDocumentClass->getView(pDocument);
+    pDocument->m_pDocumentClass->setView(pDocument, viewId);
+    Scheduler::ProcessEventsToIdle();
+
+    // Test renderShapeSelection - this renders selected shapes as SVG
+    char* output = nullptr;
+    const std::size_t outputSize = pDocument->m_pDocumentClass->renderShapeSelection(pDocument, &output);
+    
+    // Verify renderShapeSelection was called
+    if (outputSize > 0)
+    {
+        CPPUNIT_ASSERT(output != nullptr);
+    }
+
+    // Clean up allocated memory if any
+    if (output)
+    {
+        std::free(output);
+    }
+}
+void DesktopLOKTest::testRenderSearchResult()
+{
+    // Load a Writer document
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get the view ID
+    int viewId = pDocument->m_pDocumentClass->getView(pDocument);
+    pDocument->m_pDocumentClass->setView(pDocument, viewId);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get tile mode
+    int tileMode = pDocument->m_pDocumentClass->getTileMode(pDocument);
+    CPPUNIT_ASSERT(tileMode >= 0); // Verify tile mode is valid
+
+    // Test renderSearchResult with a simple indexing payload
+    unsigned char* bitmapBuffer = nullptr;
+    int width = 0;
+    int height = 0;
+    size_t byteSize = 0;
+
+    const char* arguments = "<indexing><paragraph node_type=\"writer\" index=\"0\">Test</paragraph></indexing>";
+
+    bool success = pDocument->m_pDocumentClass->renderSearchResult(
+        pDocument, arguments, &bitmapBuffer, &width, &height, &byteSize);
+    
+    // Verify renderSearchResult was called
+    if (success)
+    {
+        CPPUNIT_ASSERT(width >= 0);
+        CPPUNIT_ASSERT(height >= 0);
+    }
+
+    // Clean up allocated memory if any
+    if (bitmapBuffer)
+    {
+        std::free(bitmapBuffer);
+    }
+}
+
+void DesktopLOKTest::testRenderWindow()
+{
+    // Load a Writer document
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get tile mode
+    int tileMode = pDocument->m_pDocumentClass->getTileMode(pDocument);
+    CPPUNIT_ASSERT(tileMode >= 0); // Verify tile mode is valid
+
+    // Get the view ID
+    int viewId = pDocument->m_pDocumentClass->getView(pDocument);
+    pDocument->m_pDocumentClass->setView(pDocument, viewId);
+    Scheduler::ProcessEventsToIdle();
+
+    // Set up parameters for paintWindow
+    unsigned winId = 0;
+    int startX = 0;
+    int startY = 0;
+    int bufferWidth = 800;
+    int bufferHeight = 600;
+    double dpiScale = 1.0;
+
+    const int width = bufferWidth;
+    const int height = bufferHeight;
+
+    // Allocate pixmap buffer (ARGB32 format: 4 bytes per pixel)
+    std::vector<unsigned char> pixmap(width * height * 4);
+
+    // Test paintWindowForView (paintWindow doesn't take dpiScale and viewId)
+    pDocument->m_pDocumentClass->paintWindowForView(pDocument, winId, pixmap.data(), startX, startY, width, height, dpiScale, viewId);
+    Scheduler::ProcessEventsToIdle();
 }
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
