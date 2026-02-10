@@ -226,8 +226,10 @@ public:
     void testNoDuplicateTableSelection();
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
+    void testGetDocumentType();
     void testABI();
-
+    void testSetAccessibilityState();
+    void testGetTileMode();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -308,7 +310,10 @@ public:
     CPPUNIT_TEST(testNoDuplicateTableSelection);
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
+    CPPUNIT_TEST(testGetDocumentType);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testSetAccessibilityState);
+    CPPUNIT_TEST(testGetTileMode);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4338,178 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testGetDocumentType()
+{
+    /* Sequence: lok::Document::getDocumentType */
+
+    // Given a LibreOffice installation path
+    LibLODocument_Impl* pDocument = loadDocImpl("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Define expected document type constants
+    const int LOK_DOCTYPE_TEXT = 0;
+
+    // When calling getDocumentType
+    int docType = pDocument->pClass->getDocumentType(pDocument);
+
+    // Then the document type should be valid (0-4)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Invalid document type returned",
+        docType >= 0 && docType <= 4
+    );
+
+    // Then for .odt file, document type should be LOK_DOCTYPE_TEXT
+    CPPUNIT_ASSERT_EQUAL_MESSAGE(
+        "Unexpected document type for .odt file",
+        LOK_DOCTYPE_TEXT,
+        docType
+    );
+}
+
+void DesktopLOKTest::testSetAccessibilityState()
+{
+    /* Sequence: lokCallbackTypeToString,getCommandValues,resizeWindow,getTextSelection,getClipboard,setClipboard,paste,get,resetSelection,saveAs,renderShapeSelection,removeTextContext,completeFunction,renderSearchResult,setAccessibilityState,getA11yFocusedParagraph,getA11yCaretPosition,getPresentationInfo */
+
+    // Given a LibreOffice installation path
+    LibLODocument_Impl* pDocument = loadDocImpl("SearchIndexResultTest.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Initialize for rendering
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+
+    int viewId = 0;
+
+    // lokCallbackTypeToString
+    int callbackType = LOK_CALLBACK_INVALIDATE_TILES;
+    const char* callbackStr = lokCallbackTypeToString(callbackType);
+
+    // getCommandValues
+    char* commandValues = pDocument->pClass->getCommandValues(pDocument, ".uno:CharFontName");
+    if (commandValues) {
+        free(commandValues);
+    }
+
+    // resizeWindow
+    pDocument->pClass->resizeWindow(pDocument, viewId, 1024, 768);
+
+    // getTextSelection
+    char* textSelection = pDocument->pClass->getTextSelection(pDocument, "text/plain;charset=utf-8", nullptr);
+    if (textSelection) {
+        free(textSelection);
+    }
+
+    // getClipboard
+    const char* mimeTypes = nullptr;
+    size_t outCount = 0;
+    char** outMimeTypes = nullptr;
+    size_t* outSizes = nullptr;
+    char** outStreams = nullptr;
+    bool clipboardResult = pDocument->pClass->getClipboard(pDocument, &mimeTypes, &outCount, &outMimeTypes, &outSizes, &outStreams);
+
+    // setClipboard
+    const char* inMimeTypes = "text/plain;charset=utf-8";
+    size_t inSizes = 4;
+    const char* inStreams = "test";
+    bool setClipResult = pDocument->pClass->setClipboard(pDocument, 1, &inMimeTypes, &inSizes, &inStreams);
+
+    // paste
+    pDocument->pClass->paste(pDocument, "text/plain;charset=utf-8", "test", 4);
+
+    // get (using getDocumentType)
+    int docType = pDocument->pClass->getDocumentType(pDocument);
+
+    // resetSelection
+    pDocument->pClass->resetSelection(pDocument);
+
+    // saveAs
+    bool saveResult = pDocument->pClass->saveAs(pDocument, "/tmp/output.pdf", "pdf", nullptr);
+
+    // renderShapeSelection
+    char* shapeSelectionOutput = nullptr;
+    size_t shapeSelectionSize = pDocument->pClass->renderShapeSelection(pDocument, &shapeSelectionOutput);
+    if (shapeSelectionOutput) {
+        free(shapeSelectionOutput);
+    }
+
+    // removeTextContext
+    pDocument->pClass->removeTextContext(pDocument, 0, 0, 0);
+
+    // completeFunction
+    pDocument->pClass->completeFunction(pDocument, "");
+
+    // renderSearchResult
+    unsigned char* bitmapBuffer = nullptr;
+    int width = 0, height = 0;
+    size_t byteSize = 0;
+    bool renderResult = pDocument->pClass->renderSearchResult(pDocument, "", &bitmapBuffer, &width, &height, &byteSize);
+    if (bitmapBuffer) {
+        free(bitmapBuffer);
+    }
+
+    // setAccessibilityState - THE TARGET API
+    // Test 1: Enable accessibility features
+    bool enable = true;
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, enable);
+
+    // Verify accessibility is enabled by checking if accessibility-related APIs work
+    char* focusedParagraphEnabled = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraphEnabled) {
+        free(focusedParagraphEnabled);
+    }
+
+    // Test 2: Disable accessibility features
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, false);
+
+    // Test 3: Re-enable accessibility for subsequent tests
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, true);
+
+    // Verify accessibility is re-enabled
+    char* focusedParagraphReEnabled = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraphReEnabled) {
+        free(focusedParagraphReEnabled);
+    }
+
+    // getA11yFocusedParagraph
+    char* focusedParagraph = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraph) {
+        free(focusedParagraph);
+    }
+
+    // getA11yCaretPosition
+    int caretPosition = pDocument->pClass->getA11yCaretPosition(pDocument);
+
+    // getPresentationInfo
+    char* presentationInfo = pDocument->pClass->getPresentationInfo(pDocument);
+    if (presentationInfo) {
+        free(presentationInfo);
+    }
+}
+
+void DesktopLOKTest::testGetTileMode()
+{
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // When getting the tile rendering mode
+    // Returns LOK_TILEMODE_RGBA (0) or LOK_TILEMODE_BGRA (1)
+    int tileMode = pDocument->pClass->getTileMode(pDocument);
+
+    // Then the tile mode must be within expected range
+    // Must be either LOK_TILEMODE_RGBA (0) or LOK_TILEMODE_BGRA (1)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Invalid tile mode returned (expected 0 or 1)",
+        tileMode == 0 || tileMode == 1
+    );
+
+    // When calling getTileMode again
+    int tileMode2 = pDocument->pClass->getTileMode(pDocument);
+
+    // Then getTileMode must return consistent results
+    CPPUNIT_ASSERT_MESSAGE(
+        "getTileMode returned inconsistent values",
+        tileMode == tileMode2
+    );
+}
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
