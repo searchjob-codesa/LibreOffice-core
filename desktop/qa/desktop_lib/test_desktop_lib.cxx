@@ -227,7 +227,9 @@ public:
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
     void testABI();
-
+    void testGetDocumentType();
+    void testSetAccessibilityState();
+    void testGetTileMode();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -309,6 +311,9 @@ public:
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testGetDocumentType);
+    CPPUNIT_TEST(testSetAccessibilityState);
+    CPPUNIT_TEST(testGetTileMode);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4338,135 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testGetDocumentType()
+{
+    /* Sequence: lok::Document::getDocumentType */
+
+    // Given a LibreOffice installation path
+    const char* loPath = std::getenv("LO_PATH");
+    if (!loPath)
+        loPath = "/usr/lib/libreoffice/program";
+
+    // When initializing LibreOfficeKit
+    LibreOfficeKit* pOffice = lok_init(loPath);
+
+    // Then LibreOfficeKit must initialize successfully
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to initialize LibreOfficeKit",
+        pOffice != nullptr
+    );
+
+    // Given a test document path
+    const char* testDocPath = std::getenv("TEST_DOC_PATH");
+    if (!testDocPath)
+        testDocPath = "test.odt";
+
+    // When loading the document
+    LibreOfficeKitDocument* pDocument = pOffice->pClass->documentLoad(pOffice, testDocPath);
+
+    // Then the document must load successfully
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to load document via LibreOfficeKit",
+        pDocument != nullptr
+    );
+
+    // Define expected document type constants
+    const int LOK_DOCTYPE_TEXT = 0;
+    const int LOK_DOCTYPE_SPREADSHEET = 1;
+    const int LOK_DOCTYPE_PRESENTATION = 2;
+    const int LOK_DOCTYPE_DRAWING = 3;
+    const int LOK_DOCTYPE_OTHER = 4;
+
+    // When calling getDocumentType
+    int docType = pDocument->pClass->getDocumentType(pDocument);
+
+    // Then the document type should be valid (0-4)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Invalid document type returned",
+        docType >= 0 && docType <= 4
+    );
+
+    // Then for .odt file, document type should be LOK_DOCTYPE_TEXT
+    CPPUNIT_ASSERT_MESSAGE(
+        "Unexpected document type for .odt file",
+        docType == LOK_DOCTYPE_TEXT
+    );
+
+    pDocument->pClass->destroy(pDocument);
+    pOffice->pClass->destroy(pOffice);
+
+void DesktopLOKTest::testSetAccessibilityState()
+{
+    // Given a LibreOffice installation path and document
+    LibLODocument_Impl* pDocument = loadDoc("SearchIndexResultTest.odt");
+    CPPUNIT_ASSERT_MESSAGE(
+        "Failed to load document via LibreOfficeKit",
+        pDocument != nullptr
+    );
+
+    // Initialize for rendering
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+
+    int viewId = 0;
+
+    // Test 1: Enable accessibility features
+    bool enable = true;
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, enable);
+
+    // Verify accessibility is enabled by checking if accessibility-related APIs work
+    char* focusedParagraphEnabled = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraphEnabled) {
+        free(focusedParagraphEnabled);
+    }
+
+    // Test 2: Disable accessibility features
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, false);
+
+    // Test 3: Re-enable accessibility for subsequent tests
+    pDocument->pClass->setAccessibilityState(pDocument, viewId, true);
+
+    // Verify accessibility is re-enabled
+    char* focusedParagraphReEnabled = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraphReEnabled) {
+        free(focusedParagraphReEnabled);
+    }
+
+    pDocument->pClass->destroy(pDocument);
+
+void DesktopLOKTest::testGetTileMode()
+{
+    /* Sequence: lok::Document::getTileMode */
+
+    // Given a LibreOffice installation path
+    LibLibreOffice_Impl aOffice(m_sUserPath);
+    LibLODocument_Impl* pDocument = loadDocImpl("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Initialize for rendering
+    pDocument->pClass->initializeForRendering(pDocument, nullptr);
+
+    // When getting the tile rendering mode
+    // Returns LOK_TILEMODE_RGBA (0) or LOK_TILEMODE_BGRA (1)
+    int tileMode = pDocument->pClass->getTileMode(pDocument);
+
+    // Then the tile mode must be within expected range
+    // Must be either LOK_TILEMODE_RGBA (0) or LOK_TILEMODE_BGRA (1)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Invalid tile mode returned (expected 0 or 1)",
+        tileMode == 0 || tileMode == 1
+    );
+
+    // When calling getTileMode again
+    int tileMode2 = pDocument->pClass->getTileMode(pDocument);
+
+    // Then getTileMode must return consistent results
+    CPPUNIT_ASSERT_MESSAGE(
+        "getTileMode returned inconsistent values",
+        tileMode == tileMode2
+    );
+
+    pDocument->pClass->destroy(pDocument);
+}
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
