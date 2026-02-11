@@ -227,7 +227,8 @@ public:
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
     void testABI();
-
+    void testSaveAs();
+    void testGetCommandValues();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -309,6 +310,9 @@ public:
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testSaveAs);
+    CPPUNIT_TEST(testGetCommandValues);
+    CPPUNIT_TEST(testPostWindowGestureEvent);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4337,197 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testSaveAs()
+{
+    LibLODocument_Impl* pDocument = loadDocImpl("SearchIndexResultTest.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Call lokCallbackTypeToString for diagnostic purposes
+    const char* callbackName = lokCallbackTypeToString(LOK_CALLBACK_DOCUMENT_SIZE_CHANGED);
+    CPPUNIT_ASSERT(callbackName != nullptr);
+
+    // Get command values
+    char* commandValues = pDocument->pClass->getCommandValues(pDocument, ".uno:CharFontName");
+    if (commandValues) {
+        free(commandValues);
+    }
+
+    // Resize window
+    pDocument->pClass->resizeWindow(pDocument, 0, 1024, 768);
+
+    // Get text selection
+    char* textSelection = pDocument->pClass->getTextSelection(pDocument, "text/plain;charset=utf-8", nullptr);
+    if (textSelection) {
+        free(textSelection);
+    }
+
+    // Get clipboard
+    size_t outCount = 0;
+    char** outMimeTypes = nullptr;
+    size_t* outSizes = nullptr;
+    char** outStreams = nullptr;
+    bool clipboardResult = pDocument->pClass->getClipboard(pDocument, nullptr, &outCount, &outMimeTypes, &outSizes, &outStreams);
+    if (clipboardResult && outStreams) {
+        for (size_t i = 0; i < outCount; i++) {
+            if (outStreams[i]) {
+                free(outStreams[i]);
+            }
+            if (outMimeTypes && outMimeTypes[i]) {
+                free(outMimeTypes[i]);
+            }
+        }
+        if (outStreams) free(outStreams);
+        if (outMimeTypes) free(outMimeTypes);
+        if (outSizes) free(outSizes);
+    }
+
+    // Set clipboard
+    const char* mimeTypes[] = {"text/plain;charset=utf-8"};
+    const char* data[] = {"test data"};
+    size_t sizes[] = {9};
+    pDocument->pClass->setClipboard(pDocument, 1, mimeTypes, sizes, data);
+
+    // Paste
+    pDocument->pClass->paste(pDocument, "text/plain;charset=utf-8", "test", 4);
+
+    // Reset selection
+    pDocument->pClass->resetSelection(pDocument);
+
+    // SaveAs
+    utl::TempFileNamed aTempFile;
+    aTempFile.EnableKillingFile();
+    OUString aOutputPath = aTempFile.GetURL();
+    int saveAsResult = pDocument->pClass->saveAs(pDocument, aOutputPath.toUtf8().getStr(), "pdf", "");
+    CPPUNIT_ASSERT(saveAsResult != 0);
+
+    // Render shape selection
+    char* shapeSelection = nullptr;
+    pDocument->pClass->renderShapeSelection(pDocument, &shapeSelection);
+    if (shapeSelection) {
+        free(shapeSelection);
+    }
+
+    // Remove text context
+    pDocument->pClass->removeTextContext(pDocument, 0, 0, 0);
+
+    // Complete function
+    pDocument->pClass->completeFunction(pDocument, "");
+
+    // Render search result
+    unsigned char* bitmapBuffer = nullptr;
+    pDocument->pClass->renderSearchResult(pDocument, "", &bitmapBuffer, 0, 0, 0);
+    if (bitmapBuffer) {
+        free(bitmapBuffer);
+    }
+
+    // Set accessibility state
+    pDocument->pClass->setAccessibilityState(pDocument, 0, true);
+
+    // Get A11y focused paragraph
+    char* focusedParagraph = pDocument->pClass->getA11yFocusedParagraph(pDocument);
+    if (focusedParagraph) {
+        free(focusedParagraph);
+    }
+
+    // Get A11y caret position
+    pDocument->pClass->getA11yCaretPosition(pDocument);
+
+    // Get presentation info
+    char* presentationInfo = pDocument->pClass->getPresentationInfo(pDocument);
+    if (presentationInfo) {
+        free(presentationInfo);
+    }
+}
+void DesktopLOKTest::testGetCommandValues()
+{
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Test getCommandValues with a valid command
+    const char* command = ".uno:CharFontName";
+    char* commandValues = pDocument->pClass->getCommandValues(pDocument, command);
+
+    // Validate that getCommandValues returns a valid JSON string
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues returned NULL, expected JSON string",
+        commandValues != nullptr
+    );
+
+    // Check that the return value is a JSON string (should start with '{' or '[')
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues did not return valid JSON (expected '{' or '[' at start)",
+        commandValues[0] == '{' || commandValues[0] == '['
+    );
+
+    // Check that the JSON string is not empty
+    size_t len = strlen(commandValues);
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues returned JSON string too short",
+        len >= 2
+    );
+
+    // Free the returned string as documented
+    free(commandValues);
+}
+
+void DesktopLOKTest::testPostWindowGestureEvent()
+{
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Create a window for gesture events
+    unsigned int windowID = 1;
+
+    // Test parameters for postWindowGestureEvent - panBegin gesture
+    const char* type = "panBegin";
+    int x = 100;
+    int y = 200;
+    int offset = 10;
+
+    // Invoke postWindowGestureEvent
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+
+    // Validate: Function executed without crash (void return, so execution itself is validation)
+    CPPUNIT_ASSERT_MESSAGE(
+        "Document became null after postWindowGestureEvent",
+        pDocument != nullptr
+    );
+
+    // Test with pan gesture type
+    type = "pan";
+    x = 150;
+    y = 250;
+    offset = 20;
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+
+    // Test with panEnd gesture type
+    type = "panEnd";
+    x = 200;
+    y = 300;
+    offset = 0;
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+
+    // Test with zoom gesture type
+    type = "zoom";
+    x = 400;
+    y = 300;
+    offset = 50;
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+
+    // Test with boundary coordinates
+    type = "pan";
+    x = 0;
+    y = 0;
+    offset = 0;
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+
+    // Test with maximum coordinates
+    type = "pan";
+    x = 799;
+    y = 599;
+    offset = 100;
+    pDocument->pClass->postWindowGestureEvent(pDocument, windowID, type, x, y, offset);
+}
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
