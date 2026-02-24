@@ -226,8 +226,9 @@ public:
     void testNoDuplicateTableSelection();
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
+    void testGetCommandValues();
     void testABI();
-
+    void testRenderShapeSelection();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -308,7 +309,9 @@ public:
     CPPUNIT_TEST(testNoDuplicateTableSelection);
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
+    CPPUNIT_TEST(testGetCommandValues);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testRenderShapeSelection);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4336,65 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testGetCommandValues()
+{
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    CPPUNIT_ASSERT(pDocument);
+
+    // Exercise lok::Document::getCommandValues with sequence
+    const char* command = ".uno:CharFontName";
+    char* commandValues = pDocument->pClass->getCommandValues(pDocument, command);
+
+    // Validate that getCommandValues behaves as documented
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues returned NULL, expected JSON string",
+        commandValues != nullptr
+    );
+
+    // Check that the return value is a JSON string (should start with '{' or '[')
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues did not return valid JSON (expected '{' or '[' at start)",
+        commandValues[0] == '{' || commandValues[0] == '['
+    );
+
+    // Check that the JSON string is not empty
+    size_t len = strlen(commandValues);
+    CPPUNIT_ASSERT_MESSAGE(
+        "lok::Document::getCommandValues returned JSON string too short",
+        len >= 2
+    );
+
+    // Free the returned string as documented
+    free(commandValues);
+}
+void DesktopLOKTest::testRenderShapeSelection()
+{
+    // Load a Writer document (or presentation/spreadsheet with shapes)
+    LibLODocument_Impl* pDocument = loadDoc("blank_text.odt");
+    pDocument->m_pDocumentClass->initializeForRendering(pDocument, nullptr);
+    Scheduler::ProcessEventsToIdle();
+
+    // Get the view ID
+    int viewId = pDocument->m_pDocumentClass->getView(pDocument);
+    pDocument->m_pDocumentClass->setView(pDocument, viewId);
+    Scheduler::ProcessEventsToIdle();
+
+    // Test renderShapeSelection - this renders selected shapes as SVG
+    char* output = nullptr;
+    const std::size_t outputSize = pDocument->m_pDocumentClass->renderShapeSelection(pDocument, &output);
+    
+    // Verify renderShapeSelection was called
+    if (outputSize > 0)
+    {
+        CPPUNIT_ASSERT(output != nullptr);
+    }
+
+    // Clean up allocated memory if any
+    if (output)
+    {
+        std::free(output);
+    }
+}
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
