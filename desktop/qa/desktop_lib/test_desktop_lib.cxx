@@ -227,7 +227,8 @@ public:
     void testMultiViewTableSelection();
     void testColorPaletteCallback();
     void testABI();
-
+    void testOfficeSetOption();
+    void testSetOption();
     CPPUNIT_TEST_SUITE(DesktopLOKTest);
     CPPUNIT_TEST(testGetStyles);
     CPPUNIT_TEST(testGetFonts);
@@ -309,6 +310,8 @@ public:
     CPPUNIT_TEST(testMultiViewTableSelection);
     CPPUNIT_TEST(testColorPaletteCallback);
     CPPUNIT_TEST(testABI);
+    CPPUNIT_TEST(testOfficeSetOption);
+    CPPUNIT_TEST(testSetOption);
     CPPUNIT_TEST_SUITE_END();
 
     OString m_aTextSelection;
@@ -4333,6 +4336,94 @@ void DesktopLOKTest::testABI()
     CPPUNIT_ASSERT_EQUAL(documentClassOffset(81), sizeof(struct _LibreOfficeKitDocumentClass));
 }
 
+void DesktopLOKTest::testOfficeSetOption()
+{
+    // Test setOption with "addconfig" option
+    const std::string presetsPath = "/tmp/presets";
+    const std::string presetsUri = presetsPath;
+    mpLOKit->setOption("addconfig", presetsUri.c_str());
+
+    // Test setOption with "sallogoverride" option
+    // Note: The value must point to memory that stays valid, so using a static string
+    static const char* sallogValue = "+WARN+INFO";
+    mpLOKit->setOption("sallogoverride", sallogValue);
+
+    // Verify that the pointer is still valid (as documented, parameter is not copied)
+    CPPUNIT_ASSERT(sallogValue != nullptr);
+
+    // Test setOption with "profilezonerecording" option - start
+    mpLOKit->setOption("profilezonerecording", "start");
+
+    // Stop profile zone recording
+    mpLOKit->setOption("profilezonerecording", "stop");
+
+    // Test resetting sallogoverride with nullptr (as documented)
+    mpLOKit->setOption("sallogoverride", nullptr);
+
+    // Test resetting sallogoverride with empty string (as documented)
+    mpLOKit->setOption("sallogoverride", "");
+
+    // Test setOption with "addfont" option
+    mpLOKit->setOption("addfont", "file:///tmp/font.ttf");
+
+    // Dump state for debugging
+    char* stateOutput = nullptr;
+    mpLOKit->dumpState("", &stateOutput);
+    CPPUNIT_ASSERT(stateOutput != nullptr);
+    std::free(stateOutput);
+
+    // Trim memory
+    mpLOKit->trimMemory(1024);
+
+    // Join threads
+    mpLOKit->joinThreads();
+}
+
+void DesktopLOKTest::testSetOption()
+{
+    // Test setOption with profilezonerecording - documented values: "start" or "stop"
+    // When setting profilezonerecording to start
+    mpLOKit->setOption("profilezonerecording", "start");
+    // Then the call should complete without exception (void return)
+
+    // When setting profilezonerecording to stop
+    mpLOKit->setOption("profilezonerecording", "stop");
+    // Then the call should complete without exception (void return)
+
+    // Test setOption with sallogoverride
+    // Documentation states: "The parameter is not copied so you should pass a value that points to memory that will stay valid"
+    // Using static strings to ensure memory stays valid
+    static const char* sallogValue1 = "-WARN-INFO";
+    static const char* sallogValue2 = "+WARN+INFO";
+
+    // When setting sallogoverride to nullptr (should revert to SAL_LOG env var)
+    mpLOKit->setOption("sallogoverride", nullptr);
+    // Then the call should complete without exception (void return)
+
+    // When setting sallogoverride to -WARN-INFO
+    mpLOKit->setOption("sallogoverride", sallogValue1);
+    // Then the call should complete without exception (void return)
+
+    // When setting sallogoverride to +WARN+INFO
+    mpLOKit->setOption("sallogoverride", sallogValue2);
+    // Then the call should complete without exception (void return)
+
+    // When setting sallogoverride to empty string (should revert to SAL_LOG env var)
+    mpLOKit->setOption("sallogoverride", "");
+    // Then the call should complete without exception (void return)
+
+    // Test setOption with addfont - documented to add font at URL
+    const char* fontPath = "file:///usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    // When setting addfont with a font path
+    mpLOKit->setOption("addfont", fontPath);
+    // Then the call should complete without exception (void return)
+}
+
+CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
+
+CPPUNIT_PLUGIN_IMPLEMENT();
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
 CPPUNIT_TEST_SUITE_REGISTRATION(DesktopLOKTest);
 
 CPPUNIT_PLUGIN_IMPLEMENT();
